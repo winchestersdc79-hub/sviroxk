@@ -10,18 +10,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # === Java (обязательно! flutter-action не ставит его сам) ===
+      - name: Setup Java
+        uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'      # самый стабильный в 2026
           java-version: '17'
 
-      - uses: subosito/flutter-action@v2
+      # === Flutter (самое важное обновление) ===
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.41.4'    # актуальная стабильная версия (было 3.19.0 — устарела на 2+ года)
           channel: 'stable'
+          cache: true                  # кэш pub + Flutter SDK (билды в 5–10 раз быстрее и меньше фейлов)
 
       - name: Install dependencies
         run: flutter pub get
@@ -33,7 +40,7 @@ jobs:
         run: flutter build apk --release --no-shrink
 
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
