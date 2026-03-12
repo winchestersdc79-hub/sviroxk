@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../services/storage_service.dart';
+import '../services/notification_service.dart';
 
 class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
@@ -30,6 +31,7 @@ class TaskProvider extends ChangeNotifier {
     _tasks.add(task);
     notifyListeners();
     await StorageService.saveTasks(_tasks);
+    await NotificationService.scheduleTaskReminder(task);
   }
 
   Future<void> completeTask(Task task) async {
@@ -40,6 +42,11 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
     await StorageService.saveTasks(_tasks);
     await StorageService.saveArchivedTasks(_archivedTasks);
+    await NotificationService.cancelTaskReminder(task);
+    await NotificationService.showInstantNotification(
+      '✅ Задача выполнена!',
+      '"${task.title}" перемещена в архив',
+    );
   }
 
   Future<void> restoreTask(Task task) async {
@@ -50,12 +57,14 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
     await StorageService.saveTasks(_tasks);
     await StorageService.saveArchivedTasks(_archivedTasks);
+    await NotificationService.scheduleTaskReminder(task);
   }
 
   Future<void> deleteTask(Task task) async {
     _archivedTasks.remove(task);
     notifyListeners();
     await StorageService.saveArchivedTasks(_archivedTasks);
+    await NotificationService.cancelTaskReminder(task);
   }
 
   Future<void> moveTask(Task task, TaskQuadrant newQuadrant) async {
