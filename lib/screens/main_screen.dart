@@ -1,150 +1,71 @@
 import 'package:flutter/material.dart';
-import '../models/task.dart';
-import '../providers/task_provider.dart';
+import 'home_screen.dart';
+import 'pomodoro_screen.dart';
+import 'statistics_screen.dart';
+import 'archive_screen.dart';
+import 'habits_screen.dart';
 import 'package:provider/provider.dart';
+import '../providers/task_provider.dart';
 
-class StatisticsScreen extends StatelessWidget {
-  const StatisticsScreen({super.key});
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<TaskProvider>();
-    final archived = provider.archivedTasks;
-    final active = provider.tasks;
-    final total = archived.length + active.length;
+
+    final screens = [
+      const HomeScreen(),
+      const PomodoroScreen(),
+      const HabitsScreen(),
+      const StatisticsScreen(),
+      ArchiveScreen(
+        archivedTasks: provider.archivedTasks,
+        onRestore: provider.restoreTask,
+        onDelete: provider.deleteTask,
+      ),
+    ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
-      appBar: AppBar(
+      body: screens[_currentIndex],
+      bottomNavigationBar: NavigationBar(
         backgroundColor: const Color(0xFF16213E),
-        title: const Text(
-          '📊 Статистика',
-          style: TextStyle(color: Colors.white),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader('Общая статистика'),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildStatCard('Всего задач', '$total', Colors.purple),
-                const SizedBox(width: 12),
-                _buildStatCard('Выполнено', '${archived.length}', Colors.green),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildStatCard('Активных', '${active.length}', Colors.orange),
-                const SizedBox(width: 12),
-                _buildStatCard(
-                  'Процент',
-                  total == 0 ? '0%' : '${(archived.length / total * 100).toInt()}%',
-                  Colors.blue,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            _buildHeader('По квадрантам'),
-            const SizedBox(height: 12),
-            _buildQuadrantStat('🔴 Важно & Срочно', TaskQuadrant.urgentImportant, provider, Colors.red),
-            _buildQuadrantStat('🟡 Важно & Не срочно', TaskQuadrant.notUrgentImportant, provider, Colors.orange),
-            _buildQuadrantStat('🟢 Не важно & Срочно', TaskQuadrant.urgentNotImportant, provider, Colors.green),
-            _buildQuadrantStat('⚪ Не важно & Не срочно', TaskQuadrant.notUrgentNotImportant, provider, Colors.grey),
-            const SizedBox(height: 24),
-            _buildHeader('По приоритету'),
-            const SizedBox(height: 12),
-            _buildPriorityStat('🔥 P1', TaskPriority.p1, provider, Colors.red),
-            _buildPriorityStat('⚡ P2', TaskPriority.p2, provider, Colors.orange),
-            _buildPriorityStat('💤 P3', TaskPriority.p3, provider, Colors.grey),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuadrantStat(String label, TaskQuadrant quadrant, TaskProvider provider, Color color) {
-    final count = provider.getTasksByQuadrant(quadrant).length;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.white70)),
-          Text('$count задач', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPriorityStat(String label, TaskPriority priority, TaskProvider provider, Color color) {
-    final count = provider.tasks.where((t) => t.priority == priority).length;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.white70)),
-          Text('$count задач', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+        indicatorColor: const Color(0xFF9B59B6),
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.grid_view, color: Colors.white54),
+            selectedIcon: Icon(Icons.grid_view, color: Colors.white),
+            label: 'Задачи',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.timer, color: Colors.white54),
+            selectedIcon: Icon(Icons.timer, color: Colors.white),
+            label: 'Pomodoro',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.check_circle, color: Colors.white54),
+            selectedIcon: Icon(Icons.check_circle, color: Colors.white),
+            label: 'Привычки',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart, color: Colors.white54),
+            selectedIcon: Icon(Icons.bar_chart, color: Colors.white),
+            label: 'Статистика',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.archive, color: Colors.white54),
+            selectedIcon: Icon(Icons.archive, color: Colors.white),
+            label: 'Архив',
+          ),
         ],
       ),
     );
