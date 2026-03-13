@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/task.dart';
-import '../providers/task_provider.dart';
-import '../widgets/quadrant_card.dart';
-import 'add_task_screen.dart';
-
+import 'package:productivity_app/models/task.dart';
+import 'package:productivity_app/providers/task_provider.dart';
+import 'package:productivity_app/widgets/quadrant_card.dart';
+import 'package:productivity_app/screens/add_task_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
