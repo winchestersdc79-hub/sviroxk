@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/task.dart';
-
+import 'package:productivity_app/models/task.dart';
 class ArchiveScreen extends StatelessWidget {
   final List<Task> archivedTasks;
   final Function(Task) onRestore;
