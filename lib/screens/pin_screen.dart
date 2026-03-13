@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 class PinScreen extends StatefulWidget {
   final bool isSetup;
   final VoidCallback onSuccess;
