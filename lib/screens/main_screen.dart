@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:productivity_app/providers/task_provider.dart';
 import 'home_screen.dart';
-import 'package:productivity_app/screens/pomodoro_screen.dart';
-import 'package:productivity_app/screens/statistics_screen.dart';
-import 'package:productivity_app/screens/archive_screen.dart';
-import 'package:productivity_app/screens/habits_screen.dart';
-import 'package:productivity_app/screens/calendar_screen.dart';
-import 'package:productivity_app/screens/ai_screen.dart';
-import 'package:productivity_app/screens/search_screen.dart';
-import 'package:productivity_app/screens/settings_screen.dart';
-import 'package:productivity_app/screens/pin_screen.dart';
+import 'pomodoro_screen.dart';
+import 'statistics_screen.dart';
+import 'archive_screen.dart';
+import 'habits_screen.dart';
+import 'calendar_screen.dart';
+import 'ai_screen.dart';
+import 'search_screen.dart';
+import 'settings_screen.dart';
+import 'pin_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
