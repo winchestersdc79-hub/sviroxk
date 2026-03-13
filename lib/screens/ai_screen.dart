@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/task_provider.dart';
-import '../models/task.dart';
+import 'package:productivity_app/models/task.dart';
+import 'package:productivity_app/providers/task_provider.dart';
 
 class AiScreen extends StatefulWidget {
   const AiScreen({super.key});
