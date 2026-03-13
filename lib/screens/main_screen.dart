@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:productivity_app/providers/task_provider.dart';
-import 'package:productivity_app/screens/home_screen.dart';
+import 'home_screen.dart';
 import 'package:productivity_app/screens/pomodoro_screen.dart';
 import 'package:productivity_app/screens/statistics_screen.dart';
 import 'package:productivity_app/screens/archive_screen.dart';
