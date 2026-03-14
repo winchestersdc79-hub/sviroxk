@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:productivity_app/models/task.dart';
+import 'package:productivity_app/screens/habits_screen.dart';
+
 class StorageService {
   static const String _tasksKey = 'tasks';
   static const String _archivedKey = 'archived_tasks';
+  static const String _habitsKey = 'habits';
 
   static Future<void> saveTasks(List<Task> tasks) async {
     final prefs = await SharedPreferences.getInstance();
@@ -31,6 +34,35 @@ class StorageService {
     if (str == null) return [];
     final list = jsonDecode(str) as List;
     return list.map((m) => _taskFromMap(m)).toList();
+  }
+
+  // Habit storage
+  static Future<void> saveHabits(List<Habit> habits) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = habits.map((h) => {
+      'id': h.id,
+      'title': h.title,
+      'emoji': h.emoji,
+      'streak': h.streak,
+      'completedDates': h.completedDates.map((d) => d.toIso8601String()).toList(),
+    }).toList();
+    await prefs.setString(_habitsKey, jsonEncode(list));
+  }
+
+  static Future<List<Habit>> loadHabits() async {
+    final prefs = await SharedPreferences.getInstance();
+    final str = prefs.getString(_habitsKey);
+    if (str == null) return [];
+    final list = jsonDecode(str) as List;
+    return list.map((m) => Habit(
+      id: m['id'],
+      title: m['title'],
+      emoji: m['emoji'],
+      streak: m['streak'] ?? 0,
+      completedDates: (m['completedDates'] as List? ?? [])
+          .map((d) => DateTime.parse(d))
+          .toList(),
+    )).toList();
   }
 
   static Map<String, dynamic> _taskToMap(Task task) {

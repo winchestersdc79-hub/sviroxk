@@ -19,7 +19,7 @@ class HomeScreen extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            expandedHeight: 160,
+            expandedHeight: 180,
             floating: false,
             pinned: true,
             backgroundColor: const Color(0xFF0D0D1A),
@@ -29,9 +29,9 @@ class HomeScreen extends StatelessWidget {
                 'Sviroxk',
                 style: GoogleFonts.montserrat(
                   color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 24,
-                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 28,
+                  letterSpacing: 1.5,
                 ),
               ),
               background: Stack(
@@ -47,14 +47,26 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    right: -20,
-                    top: -20,
+                    right: -30,
+                    top: -30,
                     child: Container(
-                      width: 150,
-                      height: 150,
+                      width: 180,
+                      height: 180,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFF9B59B6).withOpacity(0.1),
+                        color: const Color(0xFF9B59B6).withOpacity(0.15),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 40,
+                    top: 60,
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFFE74C3C).withOpacity(0.1),
                       ),
                     ),
                   ),
@@ -62,40 +74,67 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Твоя продуктивность',
+                    style: GoogleFonts.inter(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Матрица Эйзенхауэра',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 0.8,
+                childAspectRatio: 0.85,
               ),
               delegate: SliverChildListDelegate([
                 QuadrantCard(
                   title: 'Срочно & Важно',
-                  color: const Color(0xFFFF4D4D),
+                  color: const Color(0xFFE74C3C),
                   icon: Icons.priority_high_rounded,
                   tasks: provider.getTasksByQuadrant(TaskQuadrant.urgentImportant),
                   onAddTask: () => _openAddTask(context, TaskQuadrant.urgentImportant),
                 ),
                 QuadrantCard(
                   title: 'Не срочно & Важно',
-                  color: const Color(0xFFFFB347),
+                  color: const Color(0xFFF39C12),
                   icon: Icons.star_rounded,
                   tasks: provider.getTasksByQuadrant(TaskQuadrant.notUrgentImportant),
                   onAddTask: () => _openAddTask(context, TaskQuadrant.notUrgentImportant),
                 ),
                 QuadrantCard(
                   title: 'Срочно & Не важно',
-                  color: const Color(0xFF4DFF88),
+                  color: const Color(0xFF27AE60),
                   icon: Icons.bolt_rounded,
                   tasks: provider.getTasksByQuadrant(TaskQuadrant.urgentNotImportant),
                   onAddTask: () => _openAddTask(context, TaskQuadrant.urgentNotImportant),
                 ),
                 QuadrantCard(
                   title: 'Не срочно & Не важно',
-                  color: const Color(0xFFB3B3B3),
+                  color: const Color(0xFF7F8C8D),
                   icon: Icons.inbox_rounded,
                   tasks: provider.getTasksByQuadrant(TaskQuadrant.notUrgentNotImportant),
                   onAddTask: () => _openAddTask(context, TaskQuadrant.notUrgentNotImportant),
@@ -107,12 +146,12 @@ class HomeScreen extends StatelessWidget {
       ),
       floatingActionButton: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF9B59B6).withOpacity(0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              blurRadius: 25,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -120,7 +159,7 @@ class HomeScreen extends StatelessWidget {
           onPressed: () => _openAddTask(context, null),
           backgroundColor: const Color(0xFF9B59B6),
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           child: const Icon(Icons.add_rounded, size: 48, color: Colors.white),
         ),
       ),
@@ -133,6 +172,9 @@ class HomeScreen extends StatelessWidget {
       MaterialPageRoute(builder: (_) => const AddTaskScreen()),
     );
     if (task != null && context.mounted) {
+      if (quadrant != null) {
+        task.quadrant = quadrant;
+      }
       context.read<TaskProvider>().addTask(task);
     }
   }

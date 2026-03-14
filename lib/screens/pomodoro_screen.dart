@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:productivity_app/services/notification_service.dart';
+
 class PomodoroScreen extends StatefulWidget {
   const PomodoroScreen({super.key});
 
@@ -21,7 +23,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   void _startStop() {
     if (_isRunning) {
       _timer?.cancel();
+      NotificationService.cancelPomodoro();
     } else {
+      NotificationService.schedulePomodoroEnd(_seconds ~/ 60);
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (_seconds > 0) {
           setState(() => _seconds--);
@@ -45,11 +49,19 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     } else {
       _seconds = workTime;
     }
-    setState(() => _isWork = !_isWork);
+    setState(() {
+      _isWork = !_isWork;
+      _isRunning = false;
+    });
+    NotificationService.showInstantNotification(
+      _isWork ? '🍅 Время работать!' : '☕ Время отдыхать!',
+      _isWork ? 'Пора сосредоточиться на задачах.' : 'Сделай небольшой перерыв.',
+    );
   }
 
   void _reset() {
     _timer?.cancel();
+    NotificationService.cancelPomodoro();
     setState(() {
       _seconds = workTime;
       _isRunning = false;
@@ -75,12 +87,12 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     final label = _isWork ? '🍅 Работа' : '☕ Перерыв';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: const Color(0xFF0D0D1A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF16213E),
+        backgroundColor: const Color(0xFF0D0D1A),
         title: const Text(
           '🍅 Pomodoro',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -97,26 +109,41 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               ),
             ),
             const SizedBox(height: 40),
-            Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: color, width: 6),
-                color: color.withOpacity(0.1),
-              ),
-              child: Center(
-                child: Text(
-                  _timeString,
-                  style: TextStyle(
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 260,
+                  height: 260,
+                  child: CircularProgressIndicator(
+                    value: _seconds / (_isWork ? workTime : (_pomodoroCount % 4 == 0 ? longBreak : shortBreak)),
+                    strokeWidth: 8,
                     color: color,
-                    fontSize: 60,
-                    fontWeight: FontWeight.bold,
+                    backgroundColor: color.withOpacity(0.1),
                   ),
                 ),
-              ),
+                Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.withOpacity(0.05),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _timeString,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 64,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 60),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -124,47 +151,55 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                   onPressed: _startStop,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: color,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
+                      horizontal: 40,
+                      vertical: 18,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                     ),
+                    elevation: 8,
+                    shadowColor: color.withOpacity(0.4),
                   ),
-                  child: Text(
-                    _isRunning ? '⏸ Пауза' : '▶ Старт',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Row(
+                    children: [
+                      Icon(_isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isRunning ? 'ПАУЗА' : 'СТАРТ',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                ElevatedButton(
+                const SizedBox(width: 20),
+                IconButton.filledTonal(
                   onPressed: _reset,
-                  style: ElevatedButton.styleFrom(
+                  icon: const Icon(Icons.refresh_rounded),
+                  style: IconButton.styleFrom(
                     backgroundColor: const Color(0xFF16213E),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    '↺ Сброс',
-                    style: TextStyle(color: Colors.white, fontSize: 18),
+                    foregroundColor: Colors.white70,
+                    padding: const EdgeInsets.all(18),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 40),
-            Text(
-              'Помидоров: $_pomodoroCount',
-              style: const TextStyle(color: Colors.white54, fontSize: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF16213E),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Text(
+                'Выполнено помидоров: $_pomodoroCount',
+                style: const TextStyle(color: Colors.white54, fontSize: 14),
+              ),
             ),
           ],
         ),

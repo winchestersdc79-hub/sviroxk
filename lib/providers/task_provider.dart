@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:productivity_app/models/task.dart';
 import 'package:productivity_app/services/storage_service.dart';
 import 'package:productivity_app/services/notification_service.dart';
+import 'package:productivity_app/screens/habits_screen.dart';
+
 class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
   List<Task> _archivedTasks = [];
+  List<Habit> _habits = [];
   bool _isLoading = true;
 
   List<Task> get tasks => _tasks;
   List<Task> get archivedTasks => _archivedTasks;
+  List<Habit> get habits => _habits;
   bool get isLoading => _isLoading;
 
   TaskProvider() {
@@ -18,6 +22,7 @@ class TaskProvider extends ChangeNotifier {
   Future<void> _loadData() async {
     _tasks = await StorageService.loadTasks();
     _archivedTasks = await StorageService.loadArchivedTasks();
+    _habits = await StorageService.loadHabits();
     _isLoading = false;
     notifyListeners();
   }
@@ -76,6 +81,33 @@ class TaskProvider extends ChangeNotifier {
     task.isPinned = !task.isPinned;
     notifyListeners();
     await StorageService.saveTasks(_tasks);
+  }
+
+  // Habit methods
+  Future<void> addHabit(Habit habit) async {
+    _habits.add(habit);
+    notifyListeners();
+    await StorageService.saveHabits(_habits);
+  }
+
+  Future<void> toggleHabit(Habit habit) async {
+    final now = DateTime.now();
+    if (habit.isCompletedToday) {
+      habit.completedDates.removeWhere((d) =>
+          d.year == now.year && d.month == now.month && d.day == now.day);
+      if (habit.streak > 0) habit.streak--;
+    } else {
+      habit.completedDates.add(now);
+      habit.streak++;
+    }
+    notifyListeners();
+    await StorageService.saveHabits(_habits);
+  }
+
+  Future<void> deleteHabit(Habit habit) async {
+    _habits.remove(habit);
+    notifyListeners();
+    await StorageService.saveHabits(_habits);
   }
 
   Future<void> checkAndDeleteOldTasks() async {

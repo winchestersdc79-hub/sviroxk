@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:productivity_app/models/task.dart';
 
 class AnimatedTaskCard extends StatefulWidget {
@@ -29,10 +30,10 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 350),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -61,59 +62,88 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
         child: GestureDetector(
           onTap: widget.onTap,
           child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: widget.color.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: widget.color.withOpacity(0.2)),
+              color: const Color(0xFF16213E),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: widget.color.withOpacity(0.2),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 GestureDetector(
                   onTap: _handleComplete,
                   child: Container(
-                    width: 24,
-                    height: 24,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: widget.color, width: 2),
+                      color: widget.task.isCompleted 
+                          ? widget.color 
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: widget.color, 
+                        width: 2.5,
+                      ),
                     ),
                     child: widget.task.isCompleted
-                        ? Icon(Icons.check, color: widget.color, size: 16)
+                        ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
                         : null,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         widget.task.title,
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: widget.task.isPinned
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                          decoration: widget.task.isCompleted 
+                              ? TextDecoration.lineThrough 
+                              : null,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (widget.task.deadline != null)
-                        Text(
-                          '⏰ ${widget.task.deadline!.day}.${widget.task.deadline!.month}',
-                          style: const TextStyle(
-                            color: Colors.orange,
-                            fontSize: 11,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.alarm_rounded, color: Colors.orange.withOpacity(0.8), size: 12),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${widget.task.deadline!.day}.${widget.task.deadline!.month}.${widget.task.deadline!.year}',
+                                style: GoogleFonts.inter(
+                                  color: Colors.orange.withOpacity(0.8),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],
                   ),
                 ),
                 if (widget.task.isPinned)
-                  Icon(Icons.push_pin, color: widget.color, size: 14),
+                  Icon(Icons.push_pin_rounded, color: widget.color, size: 18),
               ],
             ),
           ),

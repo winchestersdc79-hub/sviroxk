@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:productivity_app/providers/task_provider.dart';
 
 class Habit {
   final String id;
@@ -30,7 +32,6 @@ class HabitsScreen extends StatefulWidget {
 }
 
 class _HabitsScreenState extends State<HabitsScreen> {
-  final List<Habit> _habits = [];
   final _titleController = TextEditingController();
   String _selectedEmoji = '⭐';
 
@@ -38,44 +39,34 @@ class _HabitsScreenState extends State<HabitsScreen> {
     '⭐', '💪', '📚', '🏃', '💧', '🧘', '🎯', '✍️', '🍎', '😴'
   ];
 
-  void _addHabit() {
+  void _addHabit(BuildContext context) {
     if (_titleController.text.isEmpty) return;
-    setState(() {
-      _habits.add(Habit(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: _titleController.text,
-        emoji: _selectedEmoji,
-      ));
-      _titleController.clear();
-    });
+    final habit = Habit(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: _titleController.text,
+      emoji: _selectedEmoji,
+    );
+    context.read<TaskProvider>().addHabit(habit);
+    _titleController.clear();
     Navigator.pop(context);
-  }
-
-  void _toggleHabit(Habit habit) {
-    setState(() {
-      if (habit.isCompletedToday) {
-        habit.completedDates.removeWhere((d) {
-          final now = DateTime.now();
-          return d.year == now.year && d.month == now.month && d.day == now.day;
-        });
-        if (habit.streak > 0) habit.streak--;
-      } else {
-        habit.completedDates.add(DateTime.now());
-        habit.streak++;
-      }
-    });
   }
 
   void _showAddHabit() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF16213E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,6 +82,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _titleController,
+                autofocus: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Название привычки...',
@@ -125,11 +117,11 @@ class _HabitsScreenState extends State<HabitsScreen> {
                   ),
                 )).toList(),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _addHabit,
+                  onPressed: () => _addHabit(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF9B59B6),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -143,6 +135,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -152,17 +145,20 @@ class _HabitsScreenState extends State<HabitsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<TaskProvider>();
+    final habits = provider.habits;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: const Color(0xFF0D0D1A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF16213E),
+        backgroundColor: const Color(0xFF0D0D1A),
         title: const Text(
           '✅ Привычки',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: _habits.isEmpty
+      body: habits.isEmpty
           ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -183,68 +179,82 @@ class _HabitsScreenState extends State<HabitsScreen> {
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _habits.length,
+              itemCount: habits.length,
               itemBuilder: (ctx, i) {
-                final habit = _habits[i];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16213E),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: habit.isCompletedToday
-                          ? const Color(0xFF9B59B6)
-                          : Colors.white12,
+                final habit = habits[i];
+                return Dismissible(
+                  key: Key(habit.id),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
                     ),
+                    child: const Icon(Icons.delete_outline, color: Colors.red),
                   ),
-                  child: Row(
-                    children: [
-                      Text(habit.emoji, style: const TextStyle(fontSize: 32)),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              habit.title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '🔥 ${habit.streak} дней подряд',
-                              style: const TextStyle(
-                                color: Colors.orange,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
+                  onDismissed: (_) => provider.deleteHabit(habit),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16213E),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: habit.isCompletedToday
+                            ? const Color(0xFF9B59B6)
+                            : Colors.white12,
                       ),
-                      GestureDetector(
-                        onTap: () => _toggleHabit(habit),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: habit.isCompletedToday
-                                ? const Color(0xFF9B59B6)
-                                : Colors.white12,
-                          ),
-                          child: Icon(
-                            habit.isCompletedToday
-                                ? Icons.check
-                                : Icons.circle_outlined,
-                            color: Colors.white,
-                            size: 20,
+                    ),
+                    child: Row(
+                      children: [
+                        Text(habit.emoji, style: const TextStyle(fontSize: 32)),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                habit.title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '🔥 ${habit.streak} дней подряд',
+                                style: const TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                        GestureDetector(
+                          onTap: () => provider.toggleHabit(habit),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: habit.isCompletedToday
+                                  ? const Color(0xFF9B59B6)
+                                  : Colors.white12,
+                            ),
+                            child: Icon(
+                              habit.isCompletedToday
+                                  ? Icons.check
+                                  : Icons.circle_outlined,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

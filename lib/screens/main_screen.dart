@@ -43,58 +43,71 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       body: screens[_currentIndex],
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: const Color(0xFF16213E),
-        indicatorColor: const Color(0xFF9B59B6),
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.grid_view, color: Colors.white54),
-            selectedIcon: Icon(Icons.grid_view, color: Colors.white),
-            label: 'Задачи',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_month, color: Colors.white54),
-            selectedIcon: Icon(Icons.calendar_month, color: Colors.white),
-            label: 'Календарь',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.search, color: Colors.white54),
-            selectedIcon: Icon(Icons.search, color: Colors.white),
-            label: 'Поиск',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.timer, color: Colors.white54),
-            selectedIcon: Icon(Icons.timer, color: Colors.white),
-            label: 'Pomodoro',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.check_circle, color: Colors.white54),
-            selectedIcon: Icon(Icons.check_circle, color: Colors.white),
-            label: 'Привычки',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome, color: Colors.white54),
-            selectedIcon: Icon(Icons.auto_awesome, color: Colors.white),
-            label: 'AI',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart, color: Colors.white54),
-            selectedIcon: Icon(Icons.bar_chart, color: Colors.white),
-            label: 'Статистика',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.archive, color: Colors.white54),
-            selectedIcon: Icon(Icons.archive, color: Colors.white),
-            label: 'Архив',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings, color: Colors.white54),
-            selectedIcon: Icon(Icons.settings, color: Colors.white),
-            label: 'Настройки',
-          ),
-        ],
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              );
+            }
+            return const TextStyle(color: Colors.white54, fontSize: 10);
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const IconThemeData(color: Colors.white, size: 26);
+            }
+            return const IconThemeData(color: Colors.white54, size: 22);
+          }),
+        ),
+        child: NavigationBar(
+          backgroundColor: const Color(0xFF0D0D1A),
+          indicatorColor: const Color(0xFF9B59B6).withOpacity(0.3),
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          height: 70,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_rounded),
+              label: 'Задачи',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.calendar_month_rounded),
+              label: 'Календарь',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.search_rounded),
+              label: 'Поиск',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.timer_rounded),
+              label: 'Pomodoro',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.check_circle_rounded),
+              label: 'Привычки',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.auto_awesome_rounded),
+              label: 'AI',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_rounded),
+              label: 'Статы',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.archive_rounded),
+              label: 'Архив',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_rounded),
+              label: 'Настройки',
+            ),
+          ],
+        ),
       ),
     );
   }

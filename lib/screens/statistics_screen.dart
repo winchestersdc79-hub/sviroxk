@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:productivity_app/models/task.dart';
 import 'package:productivity_app/providers/task_provider.dart';
 
@@ -38,7 +39,14 @@ class StatisticsScreen extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF9B59B6).withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
@@ -51,21 +59,21 @@ class StatisticsScreen extends StatelessWidget {
                     '${(percent * 100).toInt()}%',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 56,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: LinearProgressIndicator(
                       value: percent,
                       backgroundColor: Colors.white24,
                       valueColor: const AlwaysStoppedAnimation(Colors.white),
-                      minHeight: 8,
+                      minHeight: 10,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -77,36 +85,93 @@ class StatisticsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
+            const Text(
+              'Распределение задач',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 200,
+              child: PieChart(
+                PieChartData(
+                  sectionsSpace: 4,
+                  centerSpaceRadius: 40,
+                  sections: [
+                    _buildPieSection(
+                      provider.getTasksByQuadrant(TaskQuadrant.urgentImportant).length,
+                      const Color(0xFFE74C3C),
+                      'С&В',
+                    ),
+                    _buildPieSection(
+                      provider.getTasksByQuadrant(TaskQuadrant.notUrgentImportant).length,
+                      const Color(0xFFF39C12),
+                      'НС&В',
+                    ),
+                    _buildPieSection(
+                      provider.getTasksByQuadrant(TaskQuadrant.urgentNotImportant).length,
+                      const Color(0xFF27AE60),
+                      'С&НВ',
+                    ),
+                    _buildPieSection(
+                      provider.getTasksByQuadrant(TaskQuadrant.notUrgentNotImportant).length,
+                      const Color(0xFF7F8C8D),
+                      'НС&НВ',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
             const Text(
               'По квадрантам',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildQuadrantStat('🔴 Важно & Срочно', TaskQuadrant.urgentImportant, provider, const Color(0xFFE74C3C), total),
             _buildQuadrantStat('🟡 Важно & Не срочно', TaskQuadrant.notUrgentImportant, provider, const Color(0xFFF39C12), total),
             _buildQuadrantStat('🟢 Не важно & Срочно', TaskQuadrant.urgentNotImportant, provider, const Color(0xFF27AE60), total),
             _buildQuadrantStat('⚪ Не важно & Не срочно', TaskQuadrant.notUrgentNotImportant, provider, const Color(0xFF7F8C8D), total),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             const Text(
               'По приоритету',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildPriorityStat('🔥 P1 — Высокий', TaskPriority.p1, provider, const Color(0xFFE74C3C)),
             _buildPriorityStat('⚡ P2 — Средний', TaskPriority.p2, provider, const Color(0xFFF39C12)),
             _buildPriorityStat('💤 P3 — Низкий', TaskPriority.p3, provider, const Color(0xFF7F8C8D)),
+            const SizedBox(height: 40),
           ],
         ),
       ),
+    );
+  }
+
+  PieChartSectionData _buildPieSection(int count, Color color, String title) {
+    return PieChartSectionData(
+      color: color,
+      value: count.toDouble() == 0 ? 0.1 : count.toDouble(),
+      title: count > 0 ? '$count' : '',
+      radius: 50,
+      titleStyle: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+      badgeWidget: count > 0 ? null : null,
     );
   }
 
@@ -117,8 +182,8 @@ class StatisticsScreen extends StatelessWidget {
           value,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
           ),
         ),
         Text(
@@ -133,12 +198,12 @@ class StatisticsScreen extends StatelessWidget {
     final count = provider.getTasksByQuadrant(quadrant).length;
     final percent = total == 0 ? 0.0 : count / total;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF16213E),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,18 +211,18 @@ class StatisticsScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
               Text('$count задач', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: percent,
               backgroundColor: color.withOpacity(0.1),
               valueColor: AlwaysStoppedAnimation(color),
-              minHeight: 6,
+              minHeight: 8,
             ),
           ),
         ],
@@ -168,26 +233,27 @@ class StatisticsScreen extends StatelessWidget {
   Widget _buildPriorityStat(String label, TaskPriority priority, TaskProvider provider, Color color) {
     final count = provider.tasks.where((t) => t.priority == priority).length;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF16213E),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70)),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 15)),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withOpacity(0.3)),
             ),
             child: Text(
               '$count',
-              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+              style: TextStyle(color: color, fontWeight: FontWeight.w900),
             ),
           ),
         ],
