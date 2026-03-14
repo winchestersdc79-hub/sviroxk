@@ -36,11 +36,11 @@ jobs:
       - name: Copy app icons
         run: |
           unzip AppIcons.zip -d app_icons
-          cp app_icons/android/mipmap-mdpi/ic_launcher.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp app_icons/android/mipmap-hdpi/ic_launcher.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp app_icons/android/mipmap-xhdpi/ic_launcher.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp app_icons/android/mipmap-xxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp app_icons/android/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp app_icons/android/mipmap-mdpi/Sviroxk.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp app_icons/android/mipmap-hdpi/Sviroxk.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp app_icons/android/mipmap-xhdpi/Sviroxk.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp app_icons/android/mipmap-xxhdpi/Sviroxk.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp app_icons/android/mipmap-xxxhdpi/Sviroxk.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
       - name: Build APK
         run: flutter build apk --release --no-shrink
       - name: Upload APK
