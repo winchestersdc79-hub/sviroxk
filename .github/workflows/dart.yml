@@ -45,6 +45,9 @@ jobs:
               img = img.resize((size, size))
               img.save('android/app/src/main/res/' + folder + '/ic_launcher.png')
           "
+      - name: Change app name
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="Sviroxk"/g' android/app/src/main/AndroidManifest.xml
       - name: Build APK
         run: flutter build apk --release --no-shrink
       - name: Upload APK
