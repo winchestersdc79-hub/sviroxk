@@ -36,11 +36,16 @@ jobs:
       - name: Copy app icons
         run: |
           unzip AppIcons.zip -d app_icons
-          cp app_icons/android/mipmap-mdpi/Sviroxk.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp app_icons/android/mipmap-hdpi/Sviroxk.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp app_icons/android/mipmap-xhdpi/Sviroxk.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp app_icons/android/mipmap-xxhdpi/Sviroxk.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp app_icons/android/mipmap-xxxhdpi/Sviroxk.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          ls app_icons/android/mipmap-mdpi/
+          python3 -c "
+          from PIL import Image
+          import shutil
+          sizes = {'mipmap-mdpi': 48, 'mipmap-hdpi': 72, 'mipmap-xhdpi': 96, 'mipmap-xxhdpi': 144, 'mipmap-xxxhdpi': 192}
+          for folder, size in sizes.items():
+              img = Image.open(f'app_icons/android/{folder}/Sviroxk.png')
+              img = img.resize((size, size))
+              img.save(f'android/app/src/main/res/{folder}/ic_launcher.png')
+          "
       - name: Build APK
         run: flutter build apk --release --no-shrink
       - name: Upload APK
