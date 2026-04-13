@@ -19,8 +19,10 @@ interface QuadrantCardProps {
 export function QuadrantCard({ title, subtitle, color, icon, tasks, onPress, onAddTask }: QuadrantCardProps) {
   const colors = useColors();
   const activeTasks = tasks.filter((t) => !t.isCompleted);
-  const totalSubtasks = tasks.reduce((acc, t) => acc + t.subtasks.length, 0);
-  const doneSubtasks = tasks.reduce((acc, t) => acc + t.subtasks.filter((s) => s.isDone).length, 0);
+  const completedTasks = tasks.filter((t) => t.isCompleted);
+  const totalTasks = tasks.length;
+  const progress = totalTasks > 0 ? completedTasks.length / totalTasks : 0;
+  const overdueCount = activeTasks.filter((t) => t.deadline && new Date(t.deadline) < new Date()).length;
 
   return (
     <Pressable
@@ -29,7 +31,7 @@ export function QuadrantCard({ title, subtitle, color, icon, tasks, onPress, onA
         styles.card,
         {
           backgroundColor: colors.card,
-          borderColor: `${color}30`,
+          borderColor: `${color}25`,
           borderWidth: 1,
           transform: [{ scale: pressed ? 0.97 : 1 }],
         },
@@ -62,25 +64,36 @@ export function QuadrantCard({ title, subtitle, color, icon, tasks, onPress, onA
         {subtitle}
       </Text>
 
+      {totalTasks > 0 && (
+        <View style={styles.progressRow}>
+          <View style={[styles.progressTrack, { backgroundColor: `${color}15` }]}>
+            <View style={[styles.progressFill, { backgroundColor: color, width: `${progress * 100}%` as any }]} />
+          </View>
+        </View>
+      )}
+
       <View style={styles.footer}>
         <View style={[styles.badge, { backgroundColor: `${color}20` }]}>
           <Text style={[styles.badgeText, { color }]}>{activeTasks.length}</Text>
         </View>
-        {totalSubtasks > 0 && (
-          <Text style={[styles.subtaskText, { color: colors.mutedForeground }]}>
-            {doneSubtasks}/{totalSubtasks}
-          </Text>
+        {overdueCount > 0 && (
+          <View style={[styles.overdueBadge, { backgroundColor: "#EF444415" }]}>
+            <Feather name="alert-circle" size={9} color="#EF4444" />
+            <Text style={[styles.overdueText, { color: "#EF4444" }]}>{overdueCount}</Text>
+          </View>
         )}
       </View>
 
       {activeTasks.length > 0 && (
         <View style={styles.taskPreview}>
           {activeTasks.slice(0, 2).map((task) => (
-            <View key={task.id} style={[styles.previewDot, { backgroundColor: color }]} />
+            <Text key={task.id} style={[styles.taskPreviewText, { color: colors.mutedForeground }]} numberOfLines={1}>
+              · {task.title}
+            </Text>
           ))}
           {activeTasks.length > 2 && (
-            <Text style={[styles.moreText, { color: colors.mutedForeground }]}>
-              +{activeTasks.length - 2}
+            <Text style={[styles.moreText, { color: `${color}80` }]}>
+              + ещё {activeTasks.length - 2}
             </Text>
           )}
         </View>
@@ -92,44 +105,57 @@ export function QuadrantCard({ title, subtitle, color, icon, tasks, onPress, onA
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     flex: 1,
-    minHeight: 140,
+    minHeight: 160,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
   addButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 7,
     justifyContent: "center",
     alignItems: "center",
   },
   title: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
     marginBottom: 2,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_400Regular",
+  },
+  progressRow: {
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  progressTrack: {
+    height: 3,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 2,
   },
   footer: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
-    gap: 8,
+    marginTop: 8,
+    gap: 6,
   },
   badge: {
     paddingHorizontal: 8,
@@ -140,24 +166,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_700Bold",
   },
-  subtaskText: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-  },
-  taskPreview: {
+  overdueBadge: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
-    gap: 4,
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  previewDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  overdueText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+  },
+  taskPreview: {
+    marginTop: 8,
+    gap: 2,
+  },
+  taskPreviewText: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
   },
   moreText: {
     fontSize: 10,
-    fontFamily: "Inter_400Regular",
-    marginLeft: 2,
+    fontFamily: "Inter_500Medium",
+    marginTop: 2,
   },
 });

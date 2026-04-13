@@ -16,7 +16,15 @@
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0D0D1F"
+      },
+      "package": "com.sviroxk.productivity",
+      "versionCode": 1,
+      "permissions": []
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },

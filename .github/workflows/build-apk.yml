@@ -1,0 +1,52 @@
+name: Собрать APK (Android)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Профиль сборки (preview = APK для тестов, production = финальный APK)'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+
+jobs:
+  build:
+    name: Собрать APK через EAS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Клонировать репозиторий
+        uses: actions/checkout@v4
+
+      - name: Установить Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Установить зависимости
+        run: npm install
+
+      - name: Установить EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Собрать APK через EAS Build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas build \
+            --platform android \
+            --profile ${{ github.event.inputs.profile || 'preview' }} \
+            --non-interactive \
+            --output ./build/sviroxk.apk
+
+      - name: Загрузить APK как артефакт
+        uses: actions/upload-artifact@v4
+        with:
+          name: sviroxk-apk
+          path: ./build/sviroxk.apk
+          retention-days: 30
