@@ -139,8 +139,7 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
+  // Использование ClassicTabLayout для стабильности на Android и Web
+  // NativeTabs (unstable-native-tabs) может вызывать проблемы при сборке APK
   return <ClassicTabLayout />;
 }
