@@ -36,6 +36,31 @@ const priorityOptions: { value: TaskPriority; label: string; color: string }[] =
 
 const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
+function getQuickDeadlines() {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const in3Days = new Date(today);
+  in3Days.setDate(in3Days.getDate() + 3);
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  const nextMonth = new Date(today);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+  return [
+    { label: "Сегодня", date: today },
+    { label: "Завтра", date: tomorrow },
+    { label: "Через 3 дня", date: in3Days },
+    { label: "Через неделю", date: nextWeek },
+    { label: "Через месяц", date: nextMonth },
+  ];
+}
+
+function formatDeadlineDisplay(date: Date): string {
+  return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
+}
+
 export function AddTaskModal({ visible, onClose, defaultQuadrant }: AddTaskModalProps) {
   const colors = useColors();
   const { addTask } = useApp();
@@ -43,16 +68,20 @@ export function AddTaskModal({ visible, onClose, defaultQuadrant }: AddTaskModal
   const [description, setDescription] = useState("");
   const [quadrant, setQuadrant] = useState<TaskQuadrant>(defaultQuadrant || "urgentImportant");
   const [priority, setPriority] = useState<TaskPriority>("p2");
+  const [deadline, setDeadline] = useState<Date | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [subtasks, setSubtasks] = useState<SubTask[]>([]);
   const [subtaskInput, setSubtaskInput] = useState("");
+
+  const quickDeadlines = getQuickDeadlines();
 
   const reset = () => {
     setTitle("");
     setDescription("");
     setQuadrant(defaultQuadrant || "urgentImportant");
     setPriority("p2");
+    setDeadline(null);
     setTagInput("");
     setTags([]);
     setSubtasks([]);
@@ -83,7 +112,7 @@ export function AddTaskModal({ visible, onClose, defaultQuadrant }: AddTaskModal
       description: description.trim(),
       quadrant,
       priority,
-      deadline: null,
+      deadline: deadline ? deadline.toISOString() : null,
       isPinned: false,
       tags,
       subtasks,
@@ -188,6 +217,44 @@ export function AddTaskModal({ visible, onClose, defaultQuadrant }: AddTaskModal
                 </Text>
               </Pressable>
             ))}
+          </View>
+
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Дедлайн</Text>
+          <View style={styles.deadlineSection}>
+            {deadline && (
+              <View style={[styles.selectedDeadline, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }]}>
+                <Feather name="calendar" size={14} color={colors.primary} />
+                <Text style={[styles.selectedDeadlineText, { color: colors.primary }]}>
+                  {formatDeadlineDisplay(deadline)}
+                </Text>
+                <Pressable onPress={() => setDeadline(null)} hitSlop={8}>
+                  <Feather name="x" size={14} color={colors.primary} />
+                </Pressable>
+              </View>
+            )}
+            <View style={styles.deadlineGrid}>
+              {quickDeadlines.map((qd) => {
+                const isActive = deadline && deadline.toDateString() === qd.date.toDateString();
+                return (
+                  <Pressable
+                    key={qd.label}
+                    onPress={() => setDeadline(isActive ? null : qd.date)}
+                    style={[
+                      styles.deadlineChip,
+                      {
+                        backgroundColor: isActive ? `${colors.primary}20` : colors.card,
+                        borderColor: isActive ? colors.primary : colors.border,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.deadlineChipText, { color: isActive ? colors.primary : colors.mutedForeground }]}>
+                      {qd.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Подзадачи</Text>
@@ -341,6 +408,38 @@ const styles = StyleSheet.create({
   priorityLabel: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
+  },
+  deadlineSection: {
+    marginBottom: 20,
+    gap: 10,
+  },
+  selectedDeadline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  selectedDeadlineText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    flex: 1,
+  },
+  deadlineGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  deadlineChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  deadlineChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
   subtaskRow: {
     flexDirection: "row",

@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Sviroxk",
-    "slug": "mobile",
-    "version": "2.0.0",
+    "slug": "sviroxk",
+    "version": "2.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "sviroxk",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -14,7 +14,8 @@
       "backgroundColor": "#0D0D1F"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sviroxk.productivity"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +23,7 @@
         "backgroundColor": "#0D0D1F"
       },
       "package": "com.sviroxk.productivity",
-      "versionCode": 1,
+      "versionCode": 3,
       "permissions": []
     },
     "web": {
@@ -32,7 +33,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://sviroxk.app"
         }
       ],
       "expo-font",
@@ -41,6 +42,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
     }
   }
 }
