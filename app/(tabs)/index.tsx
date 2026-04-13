@@ -29,6 +29,23 @@ const quadrants: {
   { key: "notUrgentNotImportant", title: "Убрать", subtitle: "Не срочно, не важно", color: "#6B7280", icon: "inbox" },
 ];
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 6) return "Поздняя ночь 🌙";
+  if (h < 12) return "Доброе утро ☀️";
+  if (h < 17) return "Добрый день 👋";
+  if (h < 22) return "Добрый вечер 🌆";
+  return "Доброй ночи 🌙";
+}
+
+function getTip(total: number, completed: number, overdue: number): string {
+  if (overdue > 0) return `${overdue} ${overdue === 1 ? "задача просрочена" : "задачи просрочены"} — займись ими!`;
+  if (total === 0) return "Добавь первую задачу, чтобы начать";
+  if (total === completed) return "Все задачи выполнены! Отличная работа 🎉";
+  const left = total - completed;
+  return `Осталось ${left} ${left === 1 ? "задача" : left < 5 ? "задачи" : "задач"} — ты справишься!`;
+}
+
 export default function MatrixScreen() {
   const colors = useColors();
   const { getTasksByQuadrant, state } = useApp();
@@ -38,11 +55,18 @@ export default function MatrixScreen() {
   const [selectedQuadrant, setSelectedQuadrant] = useState<TaskQuadrant | undefined>();
 
   const activeTasks = state.tasks.filter((t) => !t.isCompleted);
+  const overdueTasks = state.tasks.filter(
+    (t) => !t.isCompleted && t.deadline && new Date(t.deadline) < new Date()
+  );
   const todayDeadlines = state.tasks.filter((t) => {
     if (!t.deadline || t.isCompleted) return false;
     const d = new Date(t.deadline);
     const today = new Date();
     return d.toDateString() === today.toDateString();
+  });
+  const completedToday = state.archivedTasks.filter((t) => {
+    if (!t.completedAt) return false;
+    return new Date(t.completedAt).toDateString() === new Date().toDateString();
   });
 
   return (
@@ -55,12 +79,12 @@ export default function MatrixScreen() {
         ]}
       >
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
-              Твоя продуктивность
+              {getGreeting()}
             </Text>
             <Text style={[styles.title, { color: colors.foreground }]}>
-              Матрица Эйзенхауэра
+              Матрица задач
             </Text>
           </View>
           <View style={styles.headerActions}>
@@ -76,17 +100,21 @@ export default function MatrixScreen() {
             >
               <Feather name="archive" size={18} color={colors.mutedForeground} />
             </Pressable>
+            <Pressable
+              onPress={() => router.push("/settings" as any)}
+              style={[styles.headerButton, { backgroundColor: colors.card }]}
+            >
+              <Feather name="settings" size={18} color={colors.mutedForeground} />
+            </Pressable>
           </View>
         </View>
 
-        {todayDeadlines.length > 0 && (
-          <View style={[styles.todayBanner, { backgroundColor: `${colors.warning}15`, borderColor: `${colors.warning}30` }]}>
-            <Feather name="alert-triangle" size={14} color={colors.warning} />
-            <Text style={[styles.todayText, { color: colors.warning }]}>
-              {todayDeadlines.length} {todayDeadlines.length === 1 ? "задача" : todayDeadlines.length < 5 ? "задачи" : "задач"} со сроком сегодня
-            </Text>
-          </View>
-        )}
+        <View style={[styles.tipCard, { backgroundColor: overdueTasks.length > 0 ? "#EF444415" : `${colors.primary}10`, borderColor: overdueTasks.length > 0 ? "#EF444430" : `${colors.primary}20` }]}>
+          <Feather name={overdueTasks.length > 0 ? "alert-circle" : "zap"} size={14} color={overdueTasks.length > 0 ? "#EF4444" : colors.primary} />
+          <Text style={[styles.tipText, { color: overdueTasks.length > 0 ? "#EF4444" : colors.primary }]}>
+            {getTip(activeTasks.length, completedToday.length, overdueTasks.length)}
+          </Text>
+        </View>
 
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: colors.card }]}>
@@ -94,14 +122,16 @@ export default function MatrixScreen() {
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Активные</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.statNumber, { color: colors.success }]}>{state.archivedTasks.length}</Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Сделано</Text>
+            <Text style={[styles.statNumber, { color: "#22C55E" }]}>{completedToday.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Сегодня</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.statNumber, { color: colors.warning }]}>
-              {state.tasks.filter((t) => t.deadline && new Date(t.deadline) < new Date() && !t.isCompleted).length}
-            </Text>
+            <Text style={[styles.statNumber, { color: overdueTasks.length > 0 ? "#EF4444" : colors.mutedForeground }]}>{overdueTasks.length}</Text>
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Просрочено</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.statNumber, { color: "#F59E0B" }]}>{todayDeadlines.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Сегодня срок</Text>
           </View>
         </View>
 
@@ -154,21 +184,16 @@ export default function MatrixScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
+  container: { flex: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 20 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 20,
+    marginBottom: 14,
   },
   greeting: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
     marginBottom: 2,
   },
@@ -178,46 +203,47 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
     marginTop: 4,
   },
   headerButton: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
-  todayBanner: {
+  tipCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 14,
   },
-  todayText: {
-    fontSize: 13,
+  tipText: {
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
+    flex: 1,
   },
   statsRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
+    gap: 8,
+    marginBottom: 16,
   },
   statCard: {
     flex: 1,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     alignItems: "center",
   },
   statNumber: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: "Inter_700Bold",
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
     textAlign: "center",
@@ -225,7 +251,7 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 10,
   },
   gridItem: {
     width: "47%" as any,

@@ -64,7 +64,8 @@ type AppAction =
   | { type: "ADD_HABIT"; payload: Habit }
   | { type: "TOGGLE_HABIT"; payload: string }
   | { type: "DELETE_HABIT"; payload: string }
-  | { type: "UPDATE_POMODORO_SETTINGS"; payload: PomodoroSettings };
+  | { type: "UPDATE_POMODORO_SETTINGS"; payload: PomodoroSettings }
+  | { type: "RESET_ALL" };
 
 const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
@@ -172,6 +173,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, habits: state.habits.filter((h) => h.id !== action.payload) };
     case "UPDATE_POMODORO_SETTINGS":
       return { ...state, pomodoroSettings: action.payload };
+    case "RESET_ALL":
+      return { ...initialState, isLoaded: true };
     default:
       return state;
   }
@@ -179,6 +182,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
 interface AppContextType {
   state: AppState;
+  dispatch: React.Dispatch<AppAction>;
   addTask: (task: Omit<Task, "id" | "createdAt" | "isCompleted" | "completedAt">) => void;
   updateTask: (task: Task) => void;
   completeTask: (id: string) => void;
@@ -319,6 +323,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       state,
+      dispatch,
       addTask,
       updateTask,
       completeTask,

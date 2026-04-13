@@ -27,6 +27,7 @@ function RootLayoutNav() {
       <Stack.Screen name="quadrant/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="search" options={{ headerShown: false }} />
       <Stack.Screen name="archive" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
     </Stack>
   );
 }

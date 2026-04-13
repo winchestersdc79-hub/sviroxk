@@ -3,10 +3,12 @@ name: Собрать APK (Android)
 on:
   push:
     branches: ["main"]
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       profile:
-        description: 'Профиль сборки (preview = APK для тестов, production = финальный APK)'
+        description: 'Профиль: preview = APK для тестов, production = финальный APK'
         required: true
         default: 'preview'
         type: choice
@@ -34,19 +36,47 @@ jobs:
       - name: Установить EAS CLI
         run: npm install -g eas-cli
 
-      - name: Собрать APK через EAS Build
+      - name: Собрать APK
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
+          PROFILE="${{ github.event.inputs.profile || 'preview' }}"
+          echo "Собираем профиль: $PROFILE"
           eas build \
             --platform android \
-            --profile ${{ github.event.inputs.profile || 'preview' }} \
+            --profile "$PROFILE" \
             --non-interactive \
-            --output ./build/sviroxk.apk
+            --output ./sviroxk.apk
 
       - name: Загрузить APK как артефакт
         uses: actions/upload-artifact@v4
         with:
-          name: sviroxk-apk
-          path: ./build/sviroxk.apk
+          name: sviroxk-${{ github.ref_name }}-apk
+          path: ./sviroxk.apk
           retention-days: 30
+
+      - name: Создать GitHub Релиз (только для тегов)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Sviroxk ${{ github.ref_name }}"
+          body: |
+            ## 📱 Sviroxk Productivity — ${{ github.ref_name }}
+            
+            ### Что нового:
+            - Матрица Эйзенхауэра с 4 квадрантами
+            - Pomodoro-таймер с настройками
+            - Трекер привычек со сериями
+            - Статистика и аналитика
+            - Поиск и архив задач
+            - Экран настроек
+            
+            ### Установка:
+            1. Скачай `sviroxk.apk` ниже
+            2. На телефоне: Настройки → Безопасность → Разрешить установку из неизвестных источников
+            3. Открой скачанный файл и установи
+          files: ./sviroxk.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
