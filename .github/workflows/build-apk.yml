@@ -39,23 +39,29 @@ jobs:
       - name: 🤖 Настроить Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Установить зависимости
-        run: npm install
+      - name: 📦 Установить pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
 
-      - name: Настроить Expo
+      - name: 📦 Установить зависимости
+        run: pnpm install
+
+      - name: 🏗 Настроить Expo
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
-          # Токен не обязателен для локальной сборки (--local)
           token: ${{ secrets.EXPO_TOKEN }}
           patch-watchers: true
 
-      - name: Собрать APK
+      - name: 🚀 Собрать APK
         run: |
           PROFILE="${{ github.event.inputs.profile || 'preview' }}"
           echo "Собираем профиль: $PROFILE"
-          # Используем --local для сборки прямо в GitHub Actions без необходимости в EXPO_TOKEN и EAS-серверах
-          eas build \
+          # Предварительная генерация нативных файлов для Android
+          npx expo prebuild --platform android
+          # Локальная сборка через EAS CLI
+          pnpm exec eas build \
             --platform android \
             --profile "$PROFILE" \
             --local \
