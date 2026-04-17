@@ -45,8 +45,12 @@
     },
     "extra": {
       "eas": {
-        "projectId": "83478954-4694-4934-8734-873487348734" 
+        "projectId": "e0169532-2b59-4408-9db1-91b5a1259d57"
+      },
+      "router": {
+        "origin": "https://sviroxk.app"
       }
-    }
+    },
+    "owner": "bibo-07sw-79sp"
   }
 }
