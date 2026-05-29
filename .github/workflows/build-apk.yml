@@ -9,69 +9,99 @@ jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
+          cache: 'npm'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
 
-      - name: Install dependencies
+      - name: Setup Java 17 (required for Android build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: '34.0.0'
+
+      - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Setup EAS
+      - name: Setup EAS CLI
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build APK with EAS
+      - name: Build APK locally (no cloud needed)
         working-directory: artifacts/mobile
-        run: eas build --platform android --profile preview --non-interactive --output ./sviroxk-release.apk
+        run: |
+          eas build \
+            --platform android \
+            --profile preview \
+            --local \
+            --non-interactive \
+            --output ${{ github.workspace }}/sviroxk-v2.apk
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Upload APK artifact
+      - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sviroxk-apk-${{ github.run_number }}
-          path: artifacts/mobile/sviroxk-release.apk
+          name: sviroxk-apk-build-${{ github.run_number }}
+          path: ${{ github.workspace }}/sviroxk-v2.apk
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Get short SHA
-        id: sha
-        run: echo "short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: Get commit info
+        id: info
+        run: |
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%d.%m.%Y')" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      - name: Create GitHub Release with APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: "Sviroxk v2.2 — Build #${{ github.run_number }}"
+          tag_name: v2.2-build-${{ github.run_number }}
+          name: "Sviroxk v2.2 — Build #${{ github.run_number }} (${{ steps.info.outputs.date }})"
           body: |
-            ## Sviroxk Productivity App — APK
+            ## 📱 Sviroxk Productivity — APK для Android
 
-            **Что нового:**
-            - Уведомления о задачах, привычках и Pomodoro ✅
-            - Кастомная иконка приложения 🎨
-            - Редактирование задач (нажми и держи) ✏️
-            - Выбор даты дедлайна с пикером 📅
-            - Ежедневные мотивирующие цитаты 💬
-            - Улучшенный экран привычек с недельной сеткой 📊
-            - Трекинг фокус-времени в таймере ⏱
-            - Выбор задачи в Pomodoro 🍅
-            - Улучшенная статистика с фокус-сессиями 📈
-            - Быстрое меню задачи (долгое нажатие) 👆
+            ### Что нового в v2.2
+            - ✅ Уведомления работают (разрешение запрашивается при запуске)
+            - 📎 Прикрепление фото к задачам (камера и галерея)
+            - 🖼️ Кастомная иконка приложения
+            - 💬 Цитата дня на главном экране
+            - 📊 Статистика: активных/сегодня/просрочено
+            - 🔴 Предупреждение о просроченных задачах
+            - ✏️ Редактирование задач (долгое нажатие → меню)
+            - ⏱️ Трекинг фокус-времени в таймере
+            - 📅 Выбор даты дедлайна
+            - 🏆 Рекордные серии привычек
+            - 🖥️ Адаптация под Windows (веб-версия)
 
-            **Commit:** ${{ steps.sha.outputs.short }}
-          files: artifacts/mobile/sviroxk-release.apk
+            ### Установка
+            1. Скачай `sviroxk-v2.apk` ниже
+            2. На телефоне: Настройки → Безопасность → Разрешить установку из неизвестных источников
+            3. Открой скачанный APK и установи
+
+            **Commit:** `${{ steps.info.outputs.sha }}`
+          files: ${{ github.workspace }}/sviroxk-v2.apk
           fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

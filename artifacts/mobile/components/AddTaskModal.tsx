@@ -1,8 +1,12 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert, Image, Modal, Platform, Pressable,
+  ScrollView, StyleSheet, Text, TextInput, View,
+} from "react-native";
 
 import { useColors } from "@/hooks/useColors";
 import { SubTask, TaskPriority, TaskQuadrant, useApp } from "@/contexts/AppContext";
@@ -27,6 +31,26 @@ const priorityOptions: { value: TaskPriority; label: string; color: string }[] =
 ];
 const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
+async function requestMediaPermission(): Promise<boolean> {
+  if (Platform.OS === "web") return false;
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== "granted") {
+    Alert.alert("Нет доступа", "Разреши доступ к галерее в настройках телефона, чтобы прикреплять фото.");
+    return false;
+  }
+  return true;
+}
+
+async function requestCameraPermission(): Promise<boolean> {
+  if (Platform.OS === "web") return false;
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== "granted") {
+    Alert.alert("Нет доступа к камере", "Разреши доступ к камере в настройках телефона.");
+    return false;
+  }
+  return true;
+}
+
 export function AddTaskModal({ visible, onClose, defaultQuadrant }: AddTaskModalProps) {
   const colors = useColors();
   const { addTask } = useApp();
@@ -40,28 +64,94 @@ export function AddTaskModal({ visible, onClose, defaultQuadrant }: AddTaskModal
   const [tags, setTags] = useState<string[]>([]);
   const [subtasks, setSubtasks] = useState<SubTask[]>([]);
   const [subtaskInput, setSubtaskInput] = useState("");
+  const [imageUris, setImageUris] = useState<string[]>([]);
 
   const reset = () => {
     setTitle(""); setDescription(""); setQuadrant(defaultQuadrant || "urgentImportant");
-    setPriority("p2"); setDeadline(null); setTagInput(""); setTags([]); setSubtasks([]); setSubtaskInput("");
+    setPriority("p2"); setDeadline(null); setTagInput(""); setTags([]);
+    setSubtasks([]); setSubtaskInput(""); setImageUris([]);
   };
 
-  const handleAddTag = () => { const t = tagInput.trim(); if (t && !tags.includes(t)) { setTags([...tags, t]); setTagInput(""); } };
-  const handleAddSubtask = () => { const s = subtaskInput.trim(); if (s) { setSubtasks([...subtasks, { id: generateId(), title: s, isDone: false }]); setSubtaskInput(""); } };
+  const handleAddTag = () => {
+    const t = tagInput.trim();
+    if (t && !tags.includes(t)) { setTags([...tags, t]); setTagInput(""); }
+  };
+  const handleAddSubtask = () => {
+    const s = subtaskInput.trim();
+    if (s) { setSubtasks([...subtasks, { id: generateId(), title: s, isDone: false }]); setSubtaskInput(""); }
+  };
+
+  const pickFromGallery = async () => {
+    const ok = await requestMediaPermission();
+    if (!ok) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: 4,
+      quality: 0.75,
+      allowsEditing: false,
+    });
+    if (!result.canceled) {
+      const uris = result.assets.map((a) => a.uri);
+      setImageUris((prev) => [...prev, ...uris].slice(0, 4));
+    }
+  };
+
+  const takePhoto = async () => {
+    const ok = await requestCameraPermission();
+    if (!ok) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.75,
+      allowsEditing: true,
+    });
+    if (!result.canceled) {
+      setImageUris((prev) => [...prev, result.assets[0].uri].slice(0, 4));
+    }
+  };
+
+  const showImageOptions = () => {
+    if (Platform.OS === "web") return;
+    Alert.alert("Прикрепить фото", undefined, [
+      { text: "Камера", onPress: takePhoto },
+      { text: "Галерея", onPress: pickFromGallery },
+      { text: "Отмена", style: "cancel" },
+    ]);
+  };
 
   const handleSave = async () => {
     if (!title.trim()) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const task = await new Promise<any>(resolve => {
-      const t = {
-        title: title.trim(), description: description.trim(), quadrant, priority,
-        deadline: deadline ? deadline.toISOString() : null,
-        isPinned: false, tags, subtasks,
-      };
-      addTask(t);
-      resolve(t);
+    const id = addTask({
+      title: title.trim(),
+      description: description.trim(),
+      quadrant,
+      priority,
+      deadline: deadline ? deadline.toISOString() : null,
+      isPinned: false,
+      tags,
+      subtasks,
+      imageUris,
     });
-    if (task.deadline) await scheduleDeadlineReminder({ ...task, id: generateId() });
+    if (deadline) {
+      const task = {
+        id,
+        title: title.trim(),
+        description: description.trim(),
+        quadrant,
+        priority,
+        deadline: deadline.toISOString(),
+        isPinned: false,
+        tags,
+        subtasks,
+        imageUris,
+        isCompleted: false,
+        completedAt: null,
+        createdAt: new Date().toISOString(),
+      };
+      await scheduleDeadlineReminder(task as any);
+    }
     reset();
     onClose();
   };
@@ -76,7 +166,7 @@ export function AddTaskModal({ visible, onClose, defaultQuadrant }: AddTaskModal
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Новая задача</Text>
           <Pressable onPress={handleSave} disabled={!title.trim()}
             style={[styles.saveButton, { backgroundColor: title.trim() ? colors.primary : colors.muted }]}>
-            <Text style={[styles.saveText, { color: title.trim() ? colors.primaryForeground : colors.mutedForeground }]}>Сохранить</Text>
+            <Text style={[styles.saveText, { color: title.trim() ? colors.primaryForeground : colors.mutedForeground }]}>Создать</Text>
           </Pressable>
         </View>
 
@@ -132,11 +222,43 @@ export function AddTaskModal({ visible, onClose, defaultQuadrant }: AddTaskModal
           </View>
           {showDatePicker && Platform.OS !== "web" && (
             <DateTimePicker
-              value={deadline || new Date()}
-              mode="date" display="spinner"
+              value={deadline || new Date()} mode="date" display="spinner"
               minimumDate={new Date()}
               onChange={(_, date) => { setShowDatePicker(false); if (date) setDeadline(date); }}
             />
+          )}
+          {showDatePicker && Platform.OS === "web" && (
+            <input
+              type="date"
+              min={new Date().toISOString().split("T")[0]}
+              style={{ padding: 10, borderRadius: 8, border: `1px solid ${colors.border}`, backgroundColor: colors.card, color: colors.foreground, fontSize: 14, marginBottom: 16 }}
+              onChange={(e) => { setShowDatePicker(false); if (e.target.value) setDeadline(new Date(e.target.value)); }}
+            />
+          )}
+
+          {/* Photos */}
+          {Platform.OS !== "web" && (
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Фото</Text>
+              <View style={styles.photoRow}>
+                {imageUris.map((uri, idx) => (
+                  <View key={idx} style={styles.photoThumbWrapper}>
+                    <Image source={{ uri }} style={styles.photoThumb} />
+                    <Pressable onPress={() => setImageUris(imageUris.filter((_, i) => i !== idx))}
+                      style={styles.photoRemove}>
+                      <Feather name="x" size={10} color="#fff" />
+                    </Pressable>
+                  </View>
+                ))}
+                {imageUris.length < 4 && (
+                  <Pressable onPress={showImageOptions}
+                    style={[styles.photoAdd, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Feather name="camera" size={20} color={colors.mutedForeground} />
+                    <Text style={[styles.photoAddText, { color: colors.mutedForeground }]}>Добавить</Text>
+                  </Pressable>
+                )}
+              </View>
+            </>
           )}
 
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Подзадачи</Text>
@@ -192,8 +314,8 @@ export function AddTaskModal({ visible, onClose, defaultQuadrant }: AddTaskModal
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: Platform.OS === "web" ? 67 : 0 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16 },
+  container: { flex: 1, paddingTop: Platform.OS === "web" ? 0 : 0 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16, paddingTop: Platform.OS === "web" ? 20 : 16 },
   headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
   saveButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
   saveText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
@@ -212,6 +334,12 @@ const styles = StyleSheet.create({
   deadlineBtn: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 10 },
   deadlineTxt: { fontSize: 14, fontFamily: "Inter_400Regular" },
   clearBtn: { width: 36, height: 36, borderRadius: 8, justifyContent: "center", alignItems: "center" },
+  photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
+  photoThumbWrapper: { position: "relative" },
+  photoThumb: { width: 72, height: 72, borderRadius: 10 },
+  photoRemove: { position: "absolute", top: 4, right: 4, width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },
+  photoAdd: { width: 72, height: 72, borderRadius: 10, borderWidth: 1, borderStyle: "dashed" as any, justifyContent: "center", alignItems: "center", gap: 4 },
+  photoAddText: { fontSize: 9, fontFamily: "Inter_500Medium" },
   subtaskRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   subtaskText: { fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
   inputRow: { flexDirection: "row", gap: 8, marginBottom: 20, marginTop: 4 },

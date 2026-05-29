@@ -23,6 +23,7 @@ export interface Task {
   completedAt: string | null;
   tags: string[];
   subtasks: SubTask[];
+  imageUris: string[];
 }
 
 export interface Habit {
@@ -83,7 +84,6 @@ type AppAction =
   | { type: "ADD_HABIT"; payload: Habit }
   | { type: "TOGGLE_HABIT"; payload: string }
   | { type: "DELETE_HABIT"; payload: string }
-  | { type: "UPDATE_HABIT_REMINDER"; payload: { id: string; reminderTime: string | null } }
   | { type: "ADD_FOCUS_SESSION"; payload: FocusSession }
   | { type: "UPDATE_POMODORO_SETTINGS"; payload: PomodoroSettings }
   | { type: "UPDATE_NOTIFICATION_SETTINGS"; payload: NotificationSettings }
@@ -115,6 +115,26 @@ const initialState: AppState = {
   notificationSettings: defaultNotificationSettings,
   isLoaded: false,
 };
+
+function migrateTask(t: any): Task {
+  return {
+    ...t,
+    imageUris: t.imageUris ?? [],
+    subtasks: t.subtasks ?? [],
+    tags: t.tags ?? [],
+    isPinned: t.isPinned ?? false,
+    description: t.description ?? "",
+  };
+}
+
+function migrateHabit(h: any): Habit {
+  return {
+    ...h,
+    bestStreak: h.bestStreak ?? h.streak ?? 0,
+    reminderTime: h.reminderTime ?? null,
+    completedDates: h.completedDates ?? [],
+  };
+}
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
@@ -165,14 +185,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
             return { ...h, completedDates: h.completedDates.filter((d) => d !== today), streak: Math.max(0, h.streak - 1) };
           }
           const newStreak = h.streak + 1;
-          return { ...h, completedDates: [...h.completedDates, today], streak: newStreak, bestStreak: Math.max(h.bestStreak, newStreak) };
+          return { ...h, completedDates: [...h.completedDates, today], streak: newStreak, bestStreak: Math.max(h.bestStreak ?? 0, newStreak) };
         }),
       };
     }
     case "DELETE_HABIT":
       return { ...state, habits: state.habits.filter((h) => h.id !== action.payload) };
-    case "UPDATE_HABIT_REMINDER":
-      return { ...state, habits: state.habits.map((h) => h.id === action.payload.id ? { ...h, reminderTime: action.payload.reminderTime } : h) };
     case "ADD_FOCUS_SESSION":
       return { ...state, focusSessions: [action.payload, ...state.focusSessions].slice(0, 500) };
     case "UPDATE_POMODORO_SETTINGS":
@@ -189,7 +207,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 interface AppContextType {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-  addTask: (task: Omit<Task, "id" | "createdAt" | "isCompleted" | "completedAt">) => void;
+  addTask: (task: Omit<Task, "id" | "createdAt" | "isCompleted" | "completedAt">) => string;
   updateTask: (task: Task) => void;
   completeTask: (id: string) => void;
   deleteTask: (id: string) => void;
@@ -212,9 +230,9 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 const STORAGE_KEYS = {
-  tasks: "@sviroxk_tasks",
-  archivedTasks: "@sviroxk_archived",
-  habits: "@sviroxk_habits",
+  tasks: "@sviroxk_tasks_v2",
+  archivedTasks: "@sviroxk_archived_v2",
+  habits: "@sviroxk_habits_v2",
   focusSessions: "@sviroxk_focus",
   pomodoroSettings: "@sviroxk_pomodoro",
   notificationSettings: "@sviroxk_notifications",
@@ -234,12 +252,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           AsyncStorage.getItem(STORAGE_KEYS.pomodoroSettings),
           AsyncStorage.getItem(STORAGE_KEYS.notificationSettings),
         ]);
+        const rawTasks = tasksJson ? JSON.parse(tasksJson) : [];
+        const rawArchived = archivedJson ? JSON.parse(archivedJson) : [];
+        const rawHabits = habitsJson ? JSON.parse(habitsJson) : [];
         dispatch({
           type: "LOAD_DATA",
           payload: {
-            tasks: tasksJson ? JSON.parse(tasksJson) : [],
-            archivedTasks: archivedJson ? JSON.parse(archivedJson) : [],
-            habits: habitsJson ? JSON.parse(habitsJson) : [],
+            tasks: rawTasks.map(migrateTask),
+            archivedTasks: rawArchived.map(migrateTask),
+            habits: rawHabits.map(migrateHabit),
             focusSessions: focusJson ? JSON.parse(focusJson) : [],
             pomodoroSettings: pomodoroJson ? JSON.parse(pomodoroJson) : defaultPomodoroSettings,
             notificationSettings: notifJson ? JSON.parse(notifJson) : defaultNotificationSettings,
@@ -264,7 +285,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [state.tasks, state.archivedTasks, state.habits, state.focusSessions, state.pomodoroSettings, state.notificationSettings, state.isLoaded]);
 
   const addTask = useCallback((taskData: Omit<Task, "id" | "createdAt" | "isCompleted" | "completedAt">) => {
-    dispatch({ type: "ADD_TASK", payload: { ...taskData, id: generateId(), createdAt: new Date().toISOString(), isCompleted: false, completedAt: null } });
+    const id = generateId();
+    dispatch({ type: "ADD_TASK", payload: { ...taskData, id, createdAt: new Date().toISOString(), isCompleted: false, completedAt: null } });
+    return id;
   }, []);
 
   const updateTask = useCallback((task: Task) => dispatch({ type: "UPDATE_TASK", payload: task }), []);

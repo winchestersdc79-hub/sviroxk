@@ -1,9 +1,10 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
-  Alert, Modal, Platform, Pressable, ScrollView,
+  Alert, Image, Modal, Platform, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
 } from "react-native";
 
@@ -29,6 +30,26 @@ const priorityOptions: { value: TaskPriority; label: string; color: string }[] =
   { value: "p3", label: "Низкий", color: "#6B7280" },
 ];
 
+async function requestMediaPermission(): Promise<boolean> {
+  if (Platform.OS === "web") return false;
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== "granted") {
+    Alert.alert("Нет доступа", "Разреши доступ к галерее в настройках телефона.");
+    return false;
+  }
+  return true;
+}
+
+async function requestCameraPermission(): Promise<boolean> {
+  if (Platform.OS === "web") return false;
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== "granted") {
+    Alert.alert("Нет доступа к камере", "Разреши доступ к камере в настройках.");
+    return false;
+  }
+  return true;
+}
+
 export function EditTaskModal({ visible, task, onClose }: EditTaskModalProps) {
   const colors = useColors();
   const { updateTask, deleteTask } = useApp();
@@ -40,6 +61,7 @@ export function EditTaskModal({ visible, task, onClose }: EditTaskModalProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [imageUris, setImageUris] = useState<string[]>([]);
 
   useEffect(() => {
     if (task) {
@@ -49,8 +71,44 @@ export function EditTaskModal({ visible, task, onClose }: EditTaskModalProps) {
       setPriority(task.priority);
       setDeadline(task.deadline ? new Date(task.deadline) : null);
       setTags(task.tags);
+      setImageUris(task.imageUris ?? []);
     }
   }, [task]);
+
+  const pickFromGallery = async () => {
+    const ok = await requestMediaPermission();
+    if (!ok) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: 4 - imageUris.length,
+      quality: 0.75,
+    });
+    if (!result.canceled) {
+      const uris = result.assets.map((a) => a.uri);
+      setImageUris((prev) => [...prev, ...uris].slice(0, 4));
+    }
+  };
+
+  const takePhoto = async () => {
+    const ok = await requestCameraPermission();
+    if (!ok) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.75, allowsEditing: true });
+    if (!result.canceled) {
+      setImageUris((prev) => [...prev, result.assets[0].uri].slice(0, 4));
+    }
+  };
+
+  const showImageOptions = () => {
+    if (Platform.OS === "web") return;
+    Alert.alert("Прикрепить фото", undefined, [
+      { text: "Камера", onPress: takePhoto },
+      { text: "Галерея", onPress: pickFromGallery },
+      { text: "Отмена", style: "cancel" },
+    ]);
+  };
 
   const handleSave = async () => {
     if (!task || !title.trim()) return;
@@ -63,6 +121,7 @@ export function EditTaskModal({ visible, task, onClose }: EditTaskModalProps) {
       priority,
       deadline: deadline ? deadline.toISOString() : null,
       tags,
+      imageUris,
     };
     updateTask(updated);
     await cancelTaskReminders(task.id);
@@ -106,19 +165,14 @@ export function EditTaskModal({ visible, task, onClose }: EditTaskModalProps) {
         <ScrollView style={styles.form} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <TextInput
             style={[styles.titleInput, { color: colors.foreground, borderBottomColor: colors.border }]}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Название задачи"
-            placeholderTextColor={colors.mutedForeground}
+            value={title} onChangeText={setTitle}
+            placeholder="Название задачи" placeholderTextColor={colors.mutedForeground}
           />
           <TextInput
             style={[styles.descInput, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.border }]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Описание"
-            placeholderTextColor={colors.mutedForeground}
-            multiline
-            numberOfLines={3}
+            value={description} onChangeText={setDescription}
+            placeholder="Описание" placeholderTextColor={colors.mutedForeground}
+            multiline numberOfLines={3}
           />
 
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Квадрант</Text>
@@ -160,12 +214,41 @@ export function EditTaskModal({ visible, task, onClose }: EditTaskModalProps) {
           </View>
           {showDatePicker && Platform.OS !== "web" && (
             <DateTimePicker
-              value={deadline || new Date()}
-              mode="date"
-              display="spinner"
-              minimumDate={new Date()}
+              value={deadline || new Date()} mode="date" display="spinner" minimumDate={new Date()}
               onChange={(_, date) => { setShowDatePicker(false); if (date) setDeadline(date); }}
             />
+          )}
+          {showDatePicker && Platform.OS === "web" && (
+            <input
+              type="date"
+              min={new Date().toISOString().split("T")[0]}
+              style={{ padding: 10, borderRadius: 8, border: `1px solid ${colors.border}`, backgroundColor: colors.card, color: colors.foreground, fontSize: 14, marginBottom: 16 }}
+              onChange={(e) => { setShowDatePicker(false); if (e.target.value) setDeadline(new Date(e.target.value)); }}
+            />
+          )}
+
+          {Platform.OS !== "web" && (
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Фото</Text>
+              <View style={styles.photoRow}>
+                {imageUris.map((uri, idx) => (
+                  <View key={idx} style={styles.photoThumbWrapper}>
+                    <Image source={{ uri }} style={styles.photoThumb} />
+                    <Pressable onPress={() => setImageUris(imageUris.filter((_, i) => i !== idx))}
+                      style={styles.photoRemove}>
+                      <Feather name="x" size={10} color="#fff" />
+                    </Pressable>
+                  </View>
+                ))}
+                {imageUris.length < 4 && (
+                  <Pressable onPress={showImageOptions}
+                    style={[styles.photoAdd, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Feather name="camera" size={20} color={colors.mutedForeground} />
+                    <Text style={[styles.photoAddText, { color: colors.mutedForeground }]}>Добавить</Text>
+                  </Pressable>
+                )}
+              </View>
+            </>
           )}
 
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Теги</Text>
@@ -181,12 +264,9 @@ export function EditTaskModal({ visible, task, onClose }: EditTaskModalProps) {
           <View style={styles.inputRow}>
             <TextInput
               style={[styles.smallInput, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.border }]}
-              placeholder="Добавить тег"
-              placeholderTextColor={colors.mutedForeground}
-              value={tagInput}
-              onChangeText={setTagInput}
-              onSubmitEditing={handleAddTag}
-              returnKeyType="done"
+              placeholder="Добавить тег" placeholderTextColor={colors.mutedForeground}
+              value={tagInput} onChangeText={setTagInput}
+              onSubmitEditing={handleAddTag} returnKeyType="done"
             />
             <Pressable onPress={handleAddTag} style={[styles.addBtn, { backgroundColor: colors.primary }]}>
               <Feather name="plus" size={16} color={colors.primaryForeground} />
@@ -196,7 +276,7 @@ export function EditTaskModal({ visible, task, onClose }: EditTaskModalProps) {
           <Pressable onPress={handleDelete}
             style={[styles.deleteBtn, { borderColor: "#EF444430", backgroundColor: "#EF444410" }]}>
             <Feather name="trash-2" size={16} color="#EF4444" />
-            <Text style={[styles.deleteTxt]}>Удалить задачу</Text>
+            <Text style={styles.deleteTxt}>Удалить задачу</Text>
           </Pressable>
           <View style={{ height: 60 }} />
         </ScrollView>
@@ -206,8 +286,8 @@ export function EditTaskModal({ visible, task, onClose }: EditTaskModalProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: Platform.OS === "web" ? 67 : 0 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16 },
+  container: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16, paddingTop: Platform.OS === "web" ? 20 : 16 },
   headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
   saveBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
   saveTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
@@ -226,6 +306,12 @@ const styles = StyleSheet.create({
   deadlineBtn: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 10 },
   deadlineTxt: { fontSize: 14, fontFamily: "Inter_400Regular" },
   clearBtn: { width: 36, height: 36, borderRadius: 8, justifyContent: "center", alignItems: "center" },
+  photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
+  photoThumbWrapper: { position: "relative" },
+  photoThumb: { width: 72, height: 72, borderRadius: 10 },
+  photoRemove: { position: "absolute", top: 4, right: 4, width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },
+  photoAdd: { width: 72, height: 72, borderRadius: 10, borderWidth: 1, borderStyle: "dashed" as any, justifyContent: "center", alignItems: "center", gap: 4 },
+  photoAddText: { fontSize: 9, fontFamily: "Inter_500Medium" },
   tagList: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 8 },
   tag: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, gap: 4 },
   tagText: { fontSize: 12, fontFamily: "Inter_500Medium" },
