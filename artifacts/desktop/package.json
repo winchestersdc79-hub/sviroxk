@@ -1,0 +1,56 @@
+{
+  "name": "sviroxk",
+  "version": "2.2.0",
+  "description": "Sviroxk — Приложение для продуктивности",
+  "main": "main.js",
+  "author": "Sviroxk",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64"
+  },
+  "dependencies": {
+    "electron-serve": "^2.1.1"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.sviroxk.productivity",
+    "productName": "Sviroxk",
+    "copyright": "Sviroxk 2026",
+    "directories": {
+      "output": "dist",
+      "buildResources": "."
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "web-build/**",
+      "icon.png",
+      "node_modules/**"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sviroxk",
+      "installerHeaderIcon": "icon.png",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    },
+    "portable": {
+      "artifactName": "Sviroxk-${version}-portable.exe"
+    }
+  }
+}
