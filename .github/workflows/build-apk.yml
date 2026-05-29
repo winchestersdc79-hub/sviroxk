@@ -1,101 +1,77 @@
-name: Build Android APK
+name: Build APK
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - "v*"
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      profile:
-        description: 'Профиль: preview = APK для тестов, production = финальный APK'
-        required: true
-        default: 'preview'
-        type: choice
-        options:
-          - preview
-          - production
 
 jobs:
   build:
-    name: Собрать APK через EAS
+    name: Build Android APK
     runs-on: ubuntu-latest
     steps:
-      - name: Клонировать репозиторий
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Установить Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 20
 
-      - name: ☕️ Настроить Java (JDK 17)
-        uses: actions/setup-java@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          version: 10
 
-      - name: 🤖 Настроить Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: 📦 Установить pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
-      - name: 📦 Установить зависимости
-        run: pnpm install
-
-      - name: 🏗 Настроить Expo
+      - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-          patch-watchers: true
 
-      - name: 🚀 Собрать APK
-        run: |
-          PROFILE="${{ github.event.inputs.profile || 'preview' }}"
-          echo "Собираем профиль: $PROFILE"
-          # Предварительная генерация нативных файлов для Android
-          npx expo prebuild --platform android
-          # Локальная сборка через EAS CLI
-          pnpm exec eas build \
-            --platform android \
-            --profile "$PROFILE" \
-            --local \
-            --non-interactive \
-            --output ./student-app.apk
+      - name: Build APK with EAS
+        working-directory: artifacts/mobile
+        run: eas build --platform android --profile preview --non-interactive --output ./sviroxk-release.apk
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Загрузить APK как артефакт
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: student-app-apk
-          path: ./student-app.apk
+          name: sviroxk-apk-${{ github.run_number }}
+          path: artifacts/mobile/sviroxk-release.apk
+          if-no-files-found: warn
           retention-days: 30
 
-      - name: Создать GitHub Релиз
+      - name: Get short SHA
+        id: sha
+        run: echo "short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.run_number }}
-          name: "Student App Release v${{ github.run_number }}"
+          tag_name: build-${{ github.run_number }}
+          name: "Sviroxk v2.2 — Build #${{ github.run_number }}"
           body: |
-            ## Student App — Автоматическая сборка
-            
-            ### Основные функции:
-            - Матрица Эйзенхауэра для управления задачами
-            - Pomodoro-таймер для фокусировки
-            - Трекер привычек
-            - Статистика продуктивности
-            - Календарь дедлайнов
-            
-            ### Установка:
-            1. Скачайте `student-app.apk` ниже.
-            2. Разрешите установку из неизвестных источников в настройках телефона.
-            3. Установите и пользуйтесь!
-          files: ./student-app.apk
-          draft: false
-          prerelease: false
+            ## Sviroxk Productivity App — APK
+
+            **Что нового:**
+            - Уведомления о задачах, привычках и Pomodoro ✅
+            - Кастомная иконка приложения 🎨
+            - Редактирование задач (нажми и держи) ✏️
+            - Выбор даты дедлайна с пикером 📅
+            - Ежедневные мотивирующие цитаты 💬
+            - Улучшенный экран привычек с недельной сеткой 📊
+            - Трекинг фокус-времени в таймере ⏱
+            - Выбор задачи в Pomodoro 🍅
+            - Улучшенная статистика с фокус-сессиями 📈
+            - Быстрое меню задачи (долгое нажатие) 👆
+
+            **Commit:** ${{ steps.sha.outputs.short }}
+          files: artifacts/mobile/sviroxk-release.apk
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
