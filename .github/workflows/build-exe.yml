@@ -25,26 +25,23 @@ jobs:
           version: 10
 
       - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
-      - name: Patch app.json — remove Replit-specific origin for desktop build
+      - name: Patch app.json for desktop build (remove Replit origin)
         working-directory: artifacts/mobile
-        shell: node {0}
         run: |
-          const fs = require('fs');
-          const cfg = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-          // Remove replit origin so expo-router works in Electron (file:// / custom protocol)
-          cfg.expo.plugins = (cfg.expo.plugins || []).map(p => {
-            if (Array.isArray(p) && p[0] === 'expo-router') {
-              return ['expo-router', {}];
-            }
+          node -e "
+          var fs = require('fs');
+          var cfg = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          cfg.expo.plugins = (cfg.expo.plugins || []).map(function(p) {
+            if (Array.isArray(p) && p[0] === 'expo-router') return ['expo-router', {}];
             return p;
           });
-          // Set hashbang routing for electron compatibility
           if (!cfg.expo.web) cfg.expo.web = {};
           cfg.expo.web.output = 'static';
           fs.writeFileSync('app.json', JSON.stringify(cfg, null, 2));
-          console.log('app.json patched for desktop build');
+          console.log('app.json patched OK');
+          "
 
       - name: Export Expo web build
         working-directory: artifacts/mobile
@@ -53,14 +50,14 @@ jobs:
           EXPO_NO_TELEMETRY: 1
 
       - name: Copy web build to Electron app
-        shell: bash
         run: |
-          mkdir -p artifacts/desktop/web-build
-          cp -r artifacts/mobile/web-export/. artifacts/desktop/web-build/
+          New-Item -ItemType Directory -Force -Path artifacts/desktop/web-build
+          Copy-Item -Recurse -Force artifacts/mobile/web-export/* artifacts/desktop/web-build/
+        shell: powershell
 
       - name: Copy app icon to desktop
-        shell: bash
-        run: cp artifacts/mobile/assets/images/icon.png artifacts/desktop/icon.png
+        run: Copy-Item artifacts/mobile/assets/images/icon.png artifacts/desktop/icon.png
+        shell: powershell
 
       - name: Install Electron dependencies
         working-directory: artifacts/desktop
@@ -74,15 +71,14 @@ jobs:
 
       - name: List dist output
         working-directory: artifacts/desktop
-        shell: bash
-        run: ls -la dist/
+        run: dir dist
+        shell: cmd
 
       - name: Upload installer as workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: sviroxk-windows-${{ github.run_number }}
-          path: |
-            artifacts/desktop/dist/*.exe
+          path: artifacts/desktop/dist/*.exe
           if-no-files-found: warn
           retention-days: 30
 
@@ -101,34 +97,29 @@ jobs:
           body: |
             ## 🖥️ Sviroxk Desktop — Установщик для Windows
 
-            ### Файлы
+            ### Файлы для скачивания
             | Файл | Описание |
             |------|----------|
-            | `Sviroxk Setup *.exe` | **Установщик** — устанавливает приложение как обычную программу |
-            | `Sviroxk-*-portable.exe` | **Портативная версия** — запускается без установки |
+            | `Sviroxk Setup *.exe` | **Установщик** — устанавливает как обычную программу, ярлык на рабочем столе |
+            | `Sviroxk-*-portable.exe` | **Портативная** — запускается без установки |
 
             ### Установка
             1. Скачай `Sviroxk Setup X.X.X.exe`
             2. Запусти → нажми "Далее" → выбери папку → "Установить"
-            3. После установки ярлык появится на Рабочем столе
-
-            ### Или без установки (portable)
-            Скачай `Sviroxk-*-portable.exe` и просто запусти — больше ничего не нужно.
+            3. Ярлык появится на Рабочем столе
 
             ### Что внутри
-            - ✅ Матрица Эйзенхауэра
+            - ✅ Матрица Эйзенхауэра (4 квадранта)
             - 📅 Календарь с дедлайнами
-            - 🍅 Pomodoro таймер
-            - ✔️ Привычки со стриками
-            - 📊 Статистика
+            - 🍅 Pomodoro таймер с трекингом
+            - ✔️ Привычки со стриками и рекордами
+            - 📊 Статистика продуктивности
             - 💬 Цитаты дня
             - 📎 Прикрепление фото к задачам
-            - 🔔 Уведомления (Windows notifications)
-            - 💾 Данные хранятся локально, без интернета
+            - 💾 Данные хранятся локально, работает без интернета
 
-            **Commit:** `${{ steps.info.outputs.sha }}` — `${{ steps.info.outputs.date }}`
-          files: |
-            artifacts/desktop/dist/*.exe
+            **Commit:** `${{ steps.info.outputs.sha }}` | **Дата:** ${{ steps.info.outputs.date }}
+          files: artifacts/desktop/dist/*.exe
           fail_on_unmatched_files: false
           draft: false
           prerelease: false

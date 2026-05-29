@@ -18,7 +18,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -38,7 +37,7 @@ jobs:
           build-tools: '34.0.0'
 
       - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Setup EAS CLI
         uses: expo/expo-github-action@v8
@@ -46,7 +45,7 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build APK locally (no cloud needed)
+      - name: Build APK locally
         working-directory: artifacts/mobile
         run: |
           eas build \
@@ -76,29 +75,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v2.2-build-${{ github.run_number }}
-          name: "Sviroxk v2.2 — Build #${{ github.run_number }} (${{ steps.info.outputs.date }})"
+          name: "Sviroxk v2.2 — Android APK — Build #${{ github.run_number }}"
           body: |
             ## 📱 Sviroxk Productivity — APK для Android
 
-            ### Что нового в v2.2
-            - ✅ Уведомления работают (разрешение запрашивается при запуске)
-            - 📎 Прикрепление фото к задачам (камера и галерея)
-            - 🖼️ Кастомная иконка приложения
-            - 💬 Цитата дня на главном экране
-            - 📊 Статистика: активных/сегодня/просрочено
-            - 🔴 Предупреждение о просроченных задачах
-            - ✏️ Редактирование задач (долгое нажатие → меню)
-            - ⏱️ Трекинг фокус-времени в таймере
-            - 📅 Выбор даты дедлайна
-            - 🏆 Рекордные серии привычек
-            - 🖥️ Адаптация под Windows (веб-версия)
-
             ### Установка
-            1. Скачай `sviroxk-v2.apk` ниже
+            1. Скачай `sviroxk-v2.apk`
             2. На телефоне: Настройки → Безопасность → Разрешить установку из неизвестных источников
             3. Открой скачанный APK и установи
 
-            **Commit:** `${{ steps.info.outputs.sha }}`
+            **Commit:** `${{ steps.info.outputs.sha }}` | **Дата:** ${{ steps.info.outputs.date }}
           files: ${{ github.workspace }}/sviroxk-v2.apk
           fail_on_unmatched_files: false
           draft: false
